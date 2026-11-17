@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   model: vi.fn(),
   ai: vi.fn(),
   appCheck: vi.fn(),
+  verifyToken: vi.fn(),
   config: vi.fn(),
 }))
 vi.mock('firebase/ai', async (importOriginal) => ({
@@ -19,7 +20,10 @@ vi.mock('../firebase', () => ({
   getOnDeviceFirebaseApp: () => ({ name: 'locallens-device-ai' }),
   validateFirebaseConfig: mocks.config,
 }))
-vi.mock('../appCheck', () => ({ initAppCheck: mocks.appCheck }))
+vi.mock('../appCheck', () => ({
+  initAppCheck: mocks.appCheck,
+  verifyAppCheckToken: mocks.verifyToken,
+}))
 import {
   generateInsights,
   askAssistant,
@@ -30,6 +34,7 @@ import {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal('window', { LanguageModel: {} })
+  mocks.verifyToken.mockResolvedValue(undefined)
   mocks.config.mockReturnValue([])
   mocks.appCheck.mockReturnValue({})
   mocks.initialize.mockResolvedValue(undefined)
@@ -108,6 +113,7 @@ describe('Firebase integration contract (mocked transport; not real inference)',
     expect(result.inferenceSource).toBe('on_device')
     expect(result.modelUsed).toContain('Nano')
     expect(mocks.appCheck).not.toHaveBeenCalled()
+    expect(mocks.verifyToken).not.toHaveBeenCalled()
     expect(mocks.ai.mock.calls[0][0].name).toBe('locallens-device-ai')
     expect(
       mocks.model.mock.calls[0][1].onDeviceParams.createOptions
@@ -125,10 +131,34 @@ describe('Firebase integration contract (mocked transport; not real inference)',
     expect(mocks.generate).not.toHaveBeenCalled()
   })
   it('initializes App Check before creating the separate primary cloud AI service', async () => {
-    mocks.generate.mockResolvedValue({ response: { text: () => JSON.stringify(content), inferenceSource: 'in_cloud' } })
-    await generateInsights(context, { mode: InferenceMode.ONLY_IN_CLOUD, cloudConsent: true })
+    mocks.generate.mockResolvedValue({
+      response: {
+        text: () => JSON.stringify(content),
+        inferenceSource: 'in_cloud',
+      },
+    })
+    await generateInsights(context, {
+      mode: InferenceMode.ONLY_IN_CLOUD,
+      cloudConsent: true,
+    })
     expect(mocks.ai.mock.calls[0][0].name).toBe('[DEFAULT]')
-    expect(mocks.appCheck.mock.invocationCallOrder[0]).toBeLessThan(mocks.ai.mock.invocationCallOrder[0])
+    expect(mocks.verifyToken.mock.invocationCallOrder[0]).toBeLessThan(mocks.generate.mock.invocationCallOrder[0])
+    expect(mocks.appCheck.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.ai.mock.invocationCallOrder[0],
+    )
+  })
+  it.each([
+    InferenceMode.ONLY_IN_CLOUD,
+    InferenceMode.PREFER_ON_DEVICE,
+    InferenceMode.PREFER_IN_CLOUD,
+  ])('does not generate content if App Check rejects %s', async (mode) => {
+    mocks.verifyToken.mockRejectedValue(
+      new Error('App Check verification failed'),
+    )
+    await expect(
+      generateInsights(context, { mode, cloudConsent: true }),
+    ).rejects.toThrow('App Check verification failed')
+    expect(mocks.generate).not.toHaveBeenCalled()
   })
   it('requires actual App Check initialization for cloud modes', async () => {
     mocks.appCheck.mockReturnValue(null)

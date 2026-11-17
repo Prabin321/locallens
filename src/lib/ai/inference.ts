@@ -7,7 +7,7 @@ import {
   type GenerativeModel,
 } from 'firebase/ai'
 import { app, getOnDeviceFirebaseApp, validateFirebaseConfig } from '../firebase'
-import { initAppCheck } from '../appCheck'
+import { initAppCheck, verifyAppCheckToken } from '../appCheck'
 import { getSystemInstructions } from './contextBuilder'
 import {
   CHAT_CONTRACT,
@@ -215,7 +215,12 @@ async function request(
     history,
   )
   const { model, cloudModel } = createModel(kind, scoped)
+  // Initialize Nano while the user's interaction is recent; this does not run inference.
   await abortable(initialize(model, scoped), scoped.signal)
+  scoped.signal.throwIfAborted()
+  if (options.mode !== InferenceMode.ONLY_ON_DEVICE) {
+    await abortable(verifyAppCheckToken(), scoped.signal)
+  }
   scoped.signal.throwIfAborted()
   const { response } = await abortable(
     model.generateContent(prompt, { signal: scoped.signal }),
@@ -271,7 +276,7 @@ export function explainAIError(error: unknown): string {
   // Provider errors may echo prompts, URLs and keys. Never expose raw provider errors or log them.
   const message = error instanceof Error ? error.message : ''
   if (
-    /^(Configure the required|Cloud inference requires|Cloud-capable|Gemini Nano is unavailable|The SDK did not|AI response|The model returned|Keep questions|Aggregate context|Unknown inference|Inference canceled)/.test(
+    /^(Configure the required|Cloud inference requires|Cloud-capable|Gemini Nano is unavailable|The SDK did not|AI response|The model returned|Keep questions|Aggregate context|Unknown inference|Inference canceled|App Check verification failed)/.test(
       message,
     )
   )

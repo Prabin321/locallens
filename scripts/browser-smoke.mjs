@@ -5,6 +5,11 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 const profileDir = mkdtempSync(join(tmpdir(), 'locallens-smoke-'))
+// Keep this automated UI suite offline from Firebase even when real config is injected.
+const testEnv = { ...process.env }
+for (const name of Object.keys(testEnv)) {
+  if (name.startsWith('VITE_FIREBASE_')) testEnv[name] = ''
+}
 const vite = spawn(
   process.execPath,
   [
@@ -15,7 +20,7 @@ const vite = spawn(
     '5175',
     '--strictPort',
   ],
-  { stdio: 'ignore' },
+  { stdio: 'ignore', env: testEnv },
 )
 const browser = spawn(
   process.env.CHROMIUM_BIN || 'chromium',
