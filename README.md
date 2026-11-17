@@ -26,12 +26,12 @@ LocalLens empowers developers, data analysts, and researchers to explore tabular
 
 ## 📊 Current Implementation Status
 
-### ✅ Implemented (Checkpoints 1 & 2)
+### ✅ Implemented (Checkpoints 1, 2 & 2.5)
 * [x] **Project Scaffolding:** React 19 + TypeScript + Vite 8 application setup.
 * [x] **Firebase Web SDK v13 Integration:** Safe singleton initialization preventing duplicate app instantiation during HMR.
 * [x] **Client-Safe Environment Configuration:** Secure `.env.local` loading with strict TypeScript definitions (`src/vite-env.d.ts`).
 * [x] **Initialization Diagnostics UI:** Real-time `<FirebaseStatus />` dashboard badge displaying SDK version, project ID, and initialization health.
-* [x] **Production Build & Test Pipeline:** Automated Vitest test suite, zero lint warnings (`oxlint`), and clean TypeScript build (`tsc -b && vite build`).
+* [x] **Production Build & Test Pipeline:** Automated Vitest test suite (49 unit tests), zero lint warnings (`oxlint`), and clean TypeScript build (`tsc -b && vite build`).
 * [x] **Local CSV Data Profiler (Checkpoint 2):**
   * Drag-and-drop CSV upload and file selection.
   * 100% in-browser, zero-server-upload CSV parsing via PapaParse.
@@ -42,13 +42,21 @@ LocalLens empowers developers, data analysts, and researchers to explore tabular
   * Categorical summaries: distinct count, frequency distribution, and top categories.
   * Interactive paginated raw data preview table with in-table search and missing value highlights.
   * Column filtering, search, and sorting controls.
+* [x] **Data Quality Assessment & Interactive Cleaning Engine (Checkpoint 2.5):**
+  * **Deterministic Quality Scoring:** Transparent Overall Quality Score (0–100) combining Completeness (35%), Uniqueness (25%), Validity (25%), and Consistency (15%) with component formula breakdowns.
+  * **Duplicate Detection & Resolution:** Exact and key-based duplicate identification with configurable strategies (`keep-first`, `keep-last`, `remove-all`) and explicit missing key handling.
+  * **Missing-Value Imputation:** Mean, median, mode, constant, forward-fill, and backward-fill with strict type-safety enforcement, row/column drops, and high-missingness bias warnings.
+  * **Outlier Analysis:** Statistical IQR (Tukey's fences) and Z-score outlier detection with customizable thresholds, Winsorization capping, and row removal.
+  * **Text & Categorical Harmonization:** Whitespace trimming, Title/upper/lower case normalization, inconsistent category variant detection, and targeted find-and-replace.
+  * **Domain Validation Rules:** Configurable numerical ranges, category whitelists, required fields, and regex pattern constraints.
+  * **Interactive Cleaning Workspace:** Before-and-after metrics, reversible snapshot stack with Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), Reset to Original, and action confirmation modals.
+  * **Multi-Format Export & Security:** CSV Export with formula injection defense (CWE-1236), Markdown Quality Reports, structured JSON reports for future Firebase AI Logic, and reproducible audit logs.
 
-### 🔜 Planned Features (Upcoming Checkpoints)
+### 🔜 Planned Features (Upcoming Checkpoint 3)
 * [ ] **Firebase AI Logic Hybrid Inference:**
   * Integration with `firebase/ai` (`getAI`, `getGenerativeModel`, `InferenceMode`).
-  * Dynamic routing between on-device Gemini Nano and cloud Gemini.
-* [ ] **Dataset Intelligence Dashboard:** Automated natural-language narrative insights, correlation analysis, and data quality flags.
-* [ ] **Data Export:** Export deterministic summaries and AI insights to Markdown/JSON.
+  * Dynamic routing between on-device Gemini Nano (via Chrome Built-in AI) and Cloud Gemini (via Firebase).
+  * Automated data narrative synthesis and predictive cleaning recommendations.
 
 ---
 
