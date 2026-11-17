@@ -2,14 +2,43 @@ import type { DatasetProfile } from '../../types/dataset'
 import type { DataQualityReport } from '../../types/quality'
 import type { CleaningAction } from '../../types/cleaning'
 
+// Prompt injection keyword blocklist — patterns that attempt to override instructions
+const INJECTION_PATTERNS = [
+  /ignore\s+(previous|all|above|prior)\s+instructions/i,
+  /disregard\s+(previous|all|above|prior)\s+instructions/i,
+  /forget\s+(previous|all|above|prior)\s+instructions/i,
+  /you\s+are\s+now\s+(a\s+)?(different|new|another)/i,
+  /system\s*:/i,
+  /assistant\s*:/i,
+  /\bprompt\s*injection\b/i,
+  /<\|(?:im_start|im_end|system|user|assistant)\|>/i,
+  /\[INST\]/i,
+  /<<SYS>>/i,
+  /act\s+as\s+(a\s+)?(different|new|another|unrestricted)/i,
+  /jailbreak/i,
+  /DAN\s+mode/i,
+]
+
 /**
  * Sanitizes user or dataset text to prevent prompt injection attempts.
- * Escapes control markers and truncates length.
+ * - Strips structural markup brackets
+ * - Detects and neutralises common override phrases
+ * - Truncates to a safe maximum length
  */
 export function sanitizePromptText(text: string, maxLength = 120): string {
   if (!text) return ''
+
+  // Neutralise injection attempts by replacing the whole value with a safe placeholder
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(text)) {
+      return '[REDACTED:injection-pattern-detected]'
+    }
+  }
+
   return text
     .replace(/[<>{}[\]\\]/g, '') // strip potential code/template brackets
+    .replace(/`/g, "'") // prevent backtick code execution hints
+    .replace(/\$\{[^}]*\}/g, '') // strip JS template literal interpolations
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLength)

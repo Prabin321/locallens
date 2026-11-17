@@ -1,4 +1,4 @@
-import type { InferenceMode, InferenceSource } from 'firebase/ai'
+import type { InferenceSource } from 'firebase/ai'
 
 export type ModelReadinessStatus =
   | 'uninitialized'
