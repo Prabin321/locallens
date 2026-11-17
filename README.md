@@ -26,20 +26,29 @@ LocalLens empowers developers, data analysts, and researchers to explore tabular
 
 ## 📊 Current Implementation Status
 
-### ✅ Implemented (Checkpoint 1)
+### ✅ Implemented (Checkpoints 1 & 2)
 * [x] **Project Scaffolding:** React 19 + TypeScript + Vite 8 application setup.
 * [x] **Firebase Web SDK v13 Integration:** Safe singleton initialization preventing duplicate app instantiation during HMR.
 * [x] **Client-Safe Environment Configuration:** Secure `.env.local` loading with strict TypeScript definitions (`src/vite-env.d.ts`).
 * [x] **Initialization Diagnostics UI:** Real-time `<FirebaseStatus />` dashboard badge displaying SDK version, project ID, and initialization health.
-* [x] **Production Build Pipeline:** Zero lint warnings (`oxlint`) and clean TypeScript build (`tsc -b && vite build`).
+* [x] **Production Build & Test Pipeline:** Automated Vitest test suite, zero lint warnings (`oxlint`), and clean TypeScript build (`tsc -b && vite build`).
+* [x] **Local CSV Data Profiler (Checkpoint 2):**
+  * Drag-and-drop CSV upload and file selection.
+  * 100% in-browser, zero-server-upload CSV parsing via PapaParse.
+  * Instant demo sample datasets for one-click testing.
+  * Automatic schema inference (numerical, categorical, boolean, date).
+  * Missing value & null rate detection per column and overall dataset health.
+  * Numerical summaries: min, max, mean, median, sample std dev, and interactive SVG histograms.
+  * Categorical summaries: distinct count, frequency distribution, and top categories.
+  * Interactive paginated raw data preview table with in-table search and missing value highlights.
+  * Column filtering, search, and sorting controls.
 
 ### 🔜 Planned Features (Upcoming Checkpoints)
-* [ ] **Local Data Profiler:** In-browser CSV file upload, chunked streaming, schema inference, null detection, distribution statistics, and anomaly detection.
 * [ ] **Firebase AI Logic Hybrid Inference:**
-  * Implementation of `getAI` and `getGenerativeModel`.
-  * Dynamic `InferenceMode` (selecting on-device Gemini Nano when hardware allows and falling back to cloud Gemini models).
-* [ ] **Dataset Intelligence Dashboard:** Interactive column visualizations, correlation heatmaps, and natural-language narrative insights.
-* [ ] **Data Export:** Export deterministic summaries and AI recommendations to Markdown/JSON.
+  * Integration with `firebase/ai` (`getAI`, `getGenerativeModel`, `InferenceMode`).
+  * Dynamic routing between on-device Gemini Nano and cloud Gemini.
+* [ ] **Dataset Intelligence Dashboard:** Automated natural-language narrative insights, correlation analysis, and data quality flags.
+* [ ] **Data Export:** Export deterministic summaries and AI insights to Markdown/JSON.
 
 ---
 
@@ -78,6 +87,10 @@ VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
 * **Development Server:**
   ```bash
   npm run dev
+  ```
+* **Testing:**
+  ```bash
+  npm test
   ```
 * **Linting:**
   ```bash
