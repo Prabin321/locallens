@@ -1,98 +1,113 @@
-import type { InferenceSource } from 'firebase/ai'
-import type { StructuredAIInsights } from '../../types/ai'
+import { Schema } from 'firebase/ai'
+import type {
+  AssistantReply,
+  DatasetContext,
+  GroundedClaim,
+  InsightContent,
+} from '../../types/ai'
 
-export function cleanJsonMarkdown(text: string): string {
-  let cleaned = text.trim()
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.replace(/^```json\s*/, '')
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```\s*/, '')
-  }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.replace(/\s*```$/, '')
-  }
-  return cleaned.trim()
+const claimSchema = () =>
+  Schema.object({
+    properties: {
+      text: Schema.string(),
+      evidence: Schema.array({ items: Schema.string() }),
+    },
+  })
+export const insightSchema = Schema.object({
+  properties: {
+    summary: claimSchema(),
+    quality: Schema.array({ items: claimSchema() }),
+    insights: Schema.array({ items: claimSchema() }),
+    recommendations: Schema.array({
+      items: Schema.object({
+        properties: {
+          text: Schema.string(),
+          evidence: Schema.array({ items: Schema.string() }),
+          risk: Schema.string(),
+        },
+      }),
+    }),
+    nextSteps: Schema.array({ items: claimSchema() }),
+    limitations: Schema.array({ items: Schema.string() }),
+  },
+})
+export const chatSchema = Schema.object({
+  properties: {
+    answer: claimSchema(),
+    followUps: Schema.array({ items: Schema.string() }),
+  },
+})
+export const INSIGHT_CONTRACT =
+  '{summary:{text:string,evidence:string[]},quality:[{text:string,evidence:string[]}],insights:[{text:string,evidence:string[]}],recommendations:[{text:string,evidence:string[],risk:string}],nextSteps:[{text:string,evidence:string[]}],limitations:string[]}'
+export const CHAT_CONTRACT =
+  '{answer:{text:string,evidence:string[]},followUps:string[]}'
+
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid AI response object.')
+  return value as Record<string, unknown>
 }
-
-export function parseStructuredAIResponse(
-  rawText: string,
-  inferenceSource: InferenceSource | 'offline_deterministic',
-  modelUsed: string,
-): StructuredAIInsights {
-  const cleaned = cleanJsonMarkdown(rawText)
-
+function string(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim() || value.length > 3000)
+    throw new Error('Invalid AI response text.')
+  return value
+}
+function array<T>(value: unknown, parse: (v: unknown) => T): T[] {
+  if (!Array.isArray(value) || value.length > 20)
+    throw new Error('Invalid AI response list.')
+  return value.map(parse)
+}
+function json(raw: string): Record<string, unknown> {
+  if (raw.length > 60000) throw new Error('AI response exceeds size limit.')
   try {
-    const parsed = JSON.parse(cleaned)
-
-    return {
-      datasetOverview: {
-        summary: parsed.datasetOverview?.summary || 'Dataset analysis successfully compiled.',
-        inferredPurpose:
-          parsed.datasetOverview?.inferredPurpose || 'General domain tabular exploration.',
-        columnRoles: Array.isArray(parsed.datasetOverview?.columnRoles)
-          ? parsed.datasetOverview.columnRoles
-          : [],
-      },
-      dataQualityAdvisor: {
-        criticalConcerns: Array.isArray(parsed.dataQualityAdvisor?.criticalConcerns)
-          ? parsed.dataQualityAdvisor.criticalConcerns
-          : [],
-        cleaningRecommendations: Array.isArray(parsed.dataQualityAdvisor?.cleaningRecommendations)
-          ? parsed.dataQualityAdvisor.cleaningRecommendations
-          : [],
-      },
-      analyticalInsights: {
-        keyObservations: Array.isArray(parsed.analyticalInsights?.keyObservations)
-          ? parsed.analyticalInsights.keyObservations
-          : [],
-        distributionHighlights: Array.isArray(parsed.analyticalInsights?.distributionHighlights)
-          ? parsed.analyticalInsights.distributionHighlights
-          : [],
-        deltaAfterCleaning: parsed.analyticalInsights?.deltaAfterCleaning,
-      },
-      actionableNextSteps: {
-        recommendedAnalyses: Array.isArray(parsed.actionableNextSteps?.recommendedAnalyses)
-          ? parsed.actionableNextSteps.recommendedAnalyses
-          : [],
-        featureEngineeringIdeas: Array.isArray(parsed.actionableNextSteps?.featureEngineeringIdeas)
-          ? parsed.actionableNextSteps.featureEngineeringIdeas
-          : [],
-      },
-      groundingCitations: Array.isArray(parsed.groundingCitations)
-        ? parsed.groundingCitations
-        : ['Deterministic DatasetProfile', 'DataQualityReport'],
-      limitations: Array.isArray(parsed.limitations)
-        ? parsed.limitations
-        : ['Descriptive aggregate inferences only. Causal effects require experimental verification.'],
-      inferenceSource,
-      modelUsed,
-      generatedAt: new Date().toISOString(),
-    }
+    return record(
+      JSON.parse(
+        raw
+          .trim()
+          .replace(/^```(?:json)?\s*/, '')
+          .replace(/\s*```$/, ''),
+      ),
+    )
   } catch {
-    // Graceful fallback for non-JSON or unstructured responses
-    return {
-      datasetOverview: {
-        summary: rawText.slice(0, 300) + '...',
-        inferredPurpose: 'Tabular dataset profiling.',
-        columnRoles: [],
-      },
-      dataQualityAdvisor: {
-        criticalConcerns: ['Structured JSON parsing fallback engaged.'],
-        cleaningRecommendations: [],
-      },
-      analyticalInsights: {
-        keyObservations: [rawText.slice(0, 500)],
-        distributionHighlights: [],
-      },
-      actionableNextSteps: {
-        recommendedAnalyses: ['Exploratory statistical validation'],
-        featureEngineeringIdeas: [],
-      },
-      groundingCitations: ['DatasetProfile'],
-      limitations: ['Model response produced unstructured text.'],
-      inferenceSource,
-      modelUsed,
-      generatedAt: new Date().toISOString(),
-    }
+    throw new Error(
+      'The model returned invalid JSON. No insights were accepted; try again.',
+    )
+  }
+}
+function claim(value: unknown, context: DatasetContext): GroundedClaim {
+  const obj = record(value)
+  const evidence = array(obj.evidence, string)
+  if (
+    !evidence.length ||
+    evidence.some((id) => !context.facts.some((f) => f.id === id))
+  )
+    throw new Error('AI response has missing or unknown evidence references.')
+  return { text: string(obj.text), evidence }
+}
+export function parseStructuredAIResponse(
+  raw: string,
+  context: DatasetContext,
+): InsightContent {
+  const obj = json(raw)
+  return {
+    summary: claim(obj.summary, context),
+    quality: array(obj.quality, (v) => claim(v, context)),
+    insights: array(obj.insights, (v) => claim(v, context)),
+    recommendations: array(obj.recommendations, (v) => ({
+      ...claim(v, context),
+      risk: string(record(v).risk),
+    })),
+    nextSteps: array(obj.nextSteps, (v) => claim(v, context)),
+    limitations: array(obj.limitations, string),
+  }
+}
+export function parseChatResponse(
+  raw: string,
+  context: DatasetContext,
+): Pick<AssistantReply, 'answer' | 'followUps'> {
+  const obj = json(raw)
+  return {
+    answer: claim(obj.answer, context),
+    followUps: array(obj.followUps, string).slice(0, 4),
   }
 }

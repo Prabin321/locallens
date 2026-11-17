@@ -99,3 +99,14 @@ export function getFirebaseDiagnostics(): FirebaseDiagnostics {
     sdkVersion: '13.4.0',
   }
 }
+
+/**
+ * Keep the device-only AI service separate from the App Check backed cloud service.
+ * Firebase AI captures its App Check provider at service creation. Creating the
+ * primary AI service before App Check would leave later cloud calls without it.
+ */
+export function getOnDeviceFirebaseApp(): FirebaseApp {
+  if (!app) throw new Error('Configure the required Firebase Web App variables.')
+  const name = 'locallens-device-ai'
+  return getApps().find(candidate => candidate.name === name) ?? initializeApp(app.options, name)
+}

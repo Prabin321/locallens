@@ -1,70 +1,48 @@
-import type { InferenceSource } from 'firebase/ai'
+import type { InferenceMode, InferenceSource } from 'firebase/ai'
 
-export type ModelReadinessStatus =
+export interface EvidenceFact {
+  id: string
+  label: string
+  value: number | string
+}
+export interface DatasetContext {
+  version: 1
+  facts: EvidenceFact[]
+  omittedColumns: number
+  policy: string
+}
+export interface GroundedClaim {
+  text: string
+  evidence: string[]
+}
+export interface InsightContent {
+  summary: GroundedClaim
+  quality: GroundedClaim[]
+  insights: GroundedClaim[]
+  recommendations: Array<GroundedClaim & { risk: string }>
+  nextSteps: GroundedClaim[]
+  limitations: string[]
+}
+export interface InsightReport extends InsightContent {
+  inferenceSource: InferenceSource
+  modelUsed: string
+  requestedMode: InferenceMode
+  generatedAt: string
+  evidence: EvidenceFact[]
+}
+export interface AssistantReply {
+  answer: GroundedClaim
+  followUps: string[]
+  inferenceSource: InferenceSource
+  modelUsed: string
+}
+export interface ConversationTurn {
+  question: string
+  answer: string
+}
+export type DeviceState =
   | 'uninitialized'
   | 'checking'
   | 'downloading'
   | 'ready'
   | 'unavailable'
-  | 'failed'
-
-export interface OnDeviceStatus {
-  status: ModelReadinessStatus
-  downloadProgress: number // 0 to 1
-  errorMessage?: string
-  isSupportedBrowser: boolean
-}
-
-export interface AIInsightSection {
-  title: string
-  content: string
-  citations: string[]
-}
-
-export interface StructuredAIInsights {
-  datasetOverview: {
-    summary: string
-    inferredPurpose: string
-    columnRoles: Array<{ column: string; role: string; notes: string }>
-  }
-  dataQualityAdvisor: {
-    criticalConcerns: string[]
-    cleaningRecommendations: Array<{
-      action: string
-      targetColumn?: string
-      rationale: string
-      riskNote: string
-    }>
-  }
-  analyticalInsights: {
-    keyObservations: string[]
-    distributionHighlights: string[]
-    deltaAfterCleaning?: string
-  }
-  actionableNextSteps: {
-    recommendedAnalyses: string[]
-    featureEngineeringIdeas: string[]
-  }
-  groundingCitations: string[]
-  limitations: string[]
-  inferenceSource: InferenceSource | 'offline_deterministic'
-  modelUsed: string
-  generatedAt: string
-}
-
-export interface AIChatMessage {
-  id: string
-  sender: 'user' | 'assistant'
-  text: string
-  timestamp: string
-  inferenceSource?: InferenceSource | 'deterministic'
-  citations?: string[]
-  isDeterministicMath?: boolean
-  error?: boolean
-}
-
-export interface CloudPrivacyConsent {
-  hasConsented: boolean
-  consentedAt?: string
-  allowedCloudFallback: boolean
-}
