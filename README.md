@@ -52,11 +52,15 @@ LocalLens empowers developers, data analysts, and researchers to explore tabular
   * **Interactive Cleaning Workspace:** Before-and-after metrics, reversible snapshot stack with Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), Reset to Original, and action confirmation modals.
   * **Multi-Format Export & Security:** CSV Export with formula injection defense (CWE-1236), Markdown Quality Reports, structured JSON reports for future Firebase AI Logic, and reproducible audit logs.
 
-### 🔜 Planned Features (Upcoming Checkpoint 3)
-* [ ] **Firebase AI Logic Hybrid Inference:**
-  * Integration with `firebase/ai` (`getAI`, `getGenerativeModel`, `InferenceMode`).
-  * Dynamic routing between on-device Gemini Nano (via Chrome Built-in AI) and Cloud Gemini (via Firebase).
-  * Automated data narrative synthesis and predictive cleaning recommendations.
+### Checkpoint 3: Hybrid Intelligence implementation
+
+Recovered from `wip/checkpoint-3-hybrid-ai`. The AI Insights tab includes all four Firebase SDK inference modes, device-only default, explicit cloud consent, minimized aggregate context, evidence-linked structured insights, manual cleaning recommendations, conversational follow-ups, App Check integration and Markdown/JSON exports.
+
+**Live inference is not yet verified.** SDK transport tests use mocks. Firebase Web App/App Check configuration and a supported Chrome/device are needed to validate actual Nano/cloud inference and fallback. No billing or paid service was enabled.
+
+- [Recovery audit, privacy review and validation](docs/checkpoint-3-audit.md)
+- [Firebase configuration and real inference verification](docs/firebase-ai-setup.md)
+
 
 ---
 

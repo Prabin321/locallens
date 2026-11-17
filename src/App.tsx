@@ -13,12 +13,13 @@ import type { DataQualityReport } from './types/quality'
 import { profileColumn } from './lib/profiler'
 import { assessDataQuality } from './lib/quality'
 import './App.css'
+import { AIInsights } from './components/ai/AIInsights'
 
 export function App() {
   const [datasetProfile, setDatasetProfile] = useState<DatasetProfile | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'quality' | 'columns' | 'cleaning' | 'preview' | 'export'
+    'overview' | 'quality' | 'columns' | 'cleaning' | 'preview' | 'export' | 'ai'
   >('overview')
 
   // Cleaning Snapshot Stack (Undo / Redo / Reset)
@@ -282,8 +283,8 @@ export function App() {
                     <strong style={{ color: '#818cf8' }}>On-Device AI (Nano)</strong>
                   </div>
                   <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                    Upcoming Checkpoint 3: Local Gemini Nano synthesizes micro-insights and data quality
-                    narratives directly inside Chrome.
+                    Request local Gemini Nano explanations in supported Chrome. Availability depends on
+                    browser access, hardware and model download.
                   </p>
                 </div>
 
@@ -300,8 +301,8 @@ export function App() {
                     <strong style={{ color: '#c084fc' }}>Cloud AI (Gemini 2.5)</strong>
                   </div>
                   <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                    Firebase AI Logic escalates macro synthesis, predictive imputation, and cross-column
-                    anomaly reasoning on demand.
+                    With your consent, Firebase AI Logic explains minimized aggregate statistics.
+                    Suggestions require review and never modify your data.
                   </p>
                 </div>
               </div>
@@ -320,6 +321,15 @@ export function App() {
                 marginBottom: '1.75rem',
               }}
             >
+              <button
+                type="button"
+                onClick={() => setActiveTab('ai')}
+                style={{ padding: '0.55rem 1.1rem', borderRadius: '8px',
+                  border: '1px solid #0e7490', color: '#67e8f9', cursor: 'pointer',
+                  background: activeTab === 'ai' ? '#164e63' : 'transparent' }}
+              >
+                ✦ AI Insights
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
@@ -601,6 +611,34 @@ export function App() {
                   }
                 />
               </div>
+            )}
+
+            {activeTab === 'ai' && (
+              <AIInsights
+                key={`${snapshotIndex}-${cleaningActions.length}-${validationRules.length}`}
+                profile={{
+                  ...datasetProfile,
+                  columns: currentColumns,
+                  rawHeaders: currentSnapshot.headers,
+                  previewRows: currentSnapshot.rows,
+                  rowCount: currentSnapshot.rows.length,
+                  columnCount: currentSnapshot.headers.length,
+                  totalCells:
+                    currentSnapshot.rows.length *
+                    currentSnapshot.headers.length,
+                  totalNullCells: currentQualityReport.nullCells,
+                  overallMissingRate:
+                    (currentQualityReport.nullCells /
+                      Math.max(
+                        1,
+                        currentSnapshot.rows.length *
+                          currentSnapshot.headers.length,
+                      )) *
+                    100,
+                }}
+                quality={currentQualityReport}
+                history={cleaningActions}
+              />
             )}
 
             {/* TAB 6: EXPORT */}
